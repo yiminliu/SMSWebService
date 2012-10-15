@@ -26,7 +26,7 @@ import com.tscp.mvno.smpp.exception.SmsNetworkException;
  *
  */
 
-@Service("smppService")
+@Service("smsService")
 public class SMSService {
  
     public static String inputProperties = "client.properties";
