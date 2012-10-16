@@ -111,7 +111,7 @@ public class SMSMessageManager {
 	    try {
 	       	smppService.bind(smppConnection);	
 	       	//Any exception occurred here will be rethrown
-		    messageId = sendRequest(smsMessage.getDestinationTN(), smsMessage.getMessage());
+		    messageId = sendRequest(smsMessage.getDestinationTN(), smsMessage.getMessageText());
 		    logger.info("Message was sent out successfully to: " + smsMessage.getDestinationTN());
 		}
 	    catch(ConnectException ce){
@@ -150,7 +150,7 @@ public class SMSMessageManager {
 	    	    try {
 	    	    	smppService.bind(smppConnection);
 	    	    	//Any exception occurred here will be re-thrown
-				    sendRequest(destinationTN, smsList.get(j).getMessage());
+				    sendRequest(destinationTN, smsList.get(j).getMessageText());
 			        logger.info("Message was sent out successfully to: " + destinationTN);
 			    }
 	    	    catch(ConnectException ce){
