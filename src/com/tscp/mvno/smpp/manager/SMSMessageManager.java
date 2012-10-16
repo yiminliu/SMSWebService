@@ -19,6 +19,7 @@ import com.tscp.mvno.smpp.domain.SMSMessage;
 import com.tscp.mvno.smpp.exception.SmsException;
 import com.tscp.mvno.smpp.exception.SmsIOException;
 import com.tscp.mvno.smpp.exception.SmsNetworkException;
+import com.tscp.mvno.smpp.service.DatabaseService;
 import com.tscp.mvno.smpp.service.LoggingService;
 import com.tscp.mvno.smpp.service.SMSService;
 
@@ -28,6 +29,8 @@ public class SMSMessageManager {
 
 	@Autowired
 	private SMSService smsService;
+	@Autowired
+	private DatabaseService dbService;
 	@Autowired
 	private LoggingService logger;	
 	private Connection smppConnection;
@@ -48,6 +51,8 @@ public class SMSMessageManager {
 	           logger = new LoggingService(); 
 			if(smsService == null)
 		       smsService = new SMSService();
+			if(dbService == null)
+			       dbService = new DatabaseService();
 			
 	   }    
 	   catch(RuntimeException e){
@@ -71,33 +76,44 @@ public class SMSMessageManager {
 		
 		logger.info("**** Begin processMessage() for TN: "+ destinationTN + "****");
 		String messageId = null;
+		String result = null;
 			
 		try {
 	       	smsService.bind(smppConnection);	    	   
 	        //just propaganda the exceptions if they occur
-	       	messageId = sendRequest(destinationTN, message);		    
+	       	messageId = sendRequest(destinationTN, message);	       	
 		}		
 		catch(ConnectException ce){
 			logger.error("ConnectException ocured while trying to bind SMSSC servcer, due to "+ ce.getMessage());
+			result = ce.getMessage();
 			throw new SmsNetworkException(this, "bind", destinationTN, "ConnectException occured while trying to bind SMSSC servcer", ce);
 		}
 		catch(NotBoundException nbe){
 			logger.error("NotBoundException occured while binding, due to "+ nbe.getMessage());
+	        result=nbe.getMessage();
 			throw new SmsNetworkException(this, "bind", destinationTN, "NotBoundException occured while binding SMPP connection", nbe);
 		}
 		catch(IOException ioe){
 			logger.error("IOException occured while binding, due to "+ ioe.getMessage());
+			result = ioe.getMessage();
 			throw new SmsIOException(this, "bind", destinationTN, "IOException occured while binding SMPP connection", ioe);
 		}	
 		catch(Exception e){
 			logger.error("Exception occured while binding, due to "+ e.getMessage());
+			result = e.getMessage();
 			throw new SmsException(this, "bind", destinationTN, "IOException occured while binding SMPP connection", e);
 		}
 		finally{
 			//once we're done sending SMS message, we want to unbind our connection.
-	    	 smsService.unbind(smppConnection);
-	    	 cleanUp();
-	 	}
+			try {
+				dbService.saveSmsMessage(new SMSMessage(destinationTN, message, result));
+			}
+			catch(Exception e){
+				logger.error("Exception occured while binding, due to "+ e.getMessage());
+			}
+			smsService.unbind(smppConnection);
+	    	cleanUp();
+	 	}		
 	    logger.info("Message was sent out successfully to: " + destinationTN + " Message ID = " + messageId);
 	    logger.info("**** Finished processMessage with message String****");
 		
@@ -110,7 +126,7 @@ public class SMSMessageManager {
 	    try {
 	       	smsService.bind(smppConnection);	
 	       	//Any exception occurred here will be rethrown
-		    messageId = sendRequest(smsMessage.getDestinationTN(), smsMessage.getMessage());
+		    messageId = sendRequest(smsMessage.getDestinationTN(), smsMessage.getMessageText());
 		    logger.info("Message was sent out successfully to: " + smsMessage.getDestinationTN());
 		}
 	    catch(ConnectException ce){
@@ -149,7 +165,7 @@ public class SMSMessageManager {
 	    	    try {
 	    	    	smsService.bind(smppConnection);
 	    	    	//Any exception occurred here will be re-thrown
-				    sendRequest(destinationTN, smsList.get(j).getMessage());
+				    sendRequest(destinationTN, smsList.get(j).getMessageText());
 			        logger.info("Message was sent out successfully to: " + destinationTN);
 			    }
 	    	    catch(ConnectException ce){

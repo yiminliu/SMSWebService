@@ -1,6 +1,7 @@
 package com.tscp.mvno.smpp.dao;
 
 
+import java.sql.Timestamp;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,13 @@ public class SmsDao extends HibernateDaoSupport {
     } 
     
 	public SmsDao(){}
+	
+	public int saveSmsMessage(SMSMessage sms){
+		sms.setMessageTimestamp(new Timestamp(System.currentTimeMillis()));	 	 	 
+		int id = (Integer) getHibernateTemplate().save(sms);	
+		return id;
+	}
+	
 	
 	@Transactional(readOnly=true)
 	public List<SMSMessage> getAlertMessages(String namedQueryName){
