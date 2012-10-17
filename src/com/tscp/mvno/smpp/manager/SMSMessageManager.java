@@ -10,16 +10,16 @@ import java.net.ConnectException;
 import java.net.UnknownHostException;
 import java.util.List;
 
+import javax.annotation.PreDestroy;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.stereotype.Service;
 
-import com.tscp.mvno.smpp.AlertAction;
 import com.tscp.mvno.smpp.domain.SMSMessage;
 import com.tscp.mvno.smpp.exception.SmsException;
 import com.tscp.mvno.smpp.exception.SmsIOException;
 import com.tscp.mvno.smpp.exception.SmsNetworkException;
+import com.tscp.mvno.smpp.service.DatabaseService;
 import com.tscp.mvno.smpp.service.LoggingService;
 import com.tscp.mvno.smpp.service.SMSService;
 
@@ -28,10 +28,11 @@ import com.tscp.mvno.smpp.service.SMSService;
 public class SMSMessageManager {
 
 	@Autowired
-	private SMSService smppService;
+	private SMSService smsService;
 	@Autowired
-	private LoggingService logger;
-	
+	private DatabaseService dbService;
+	@Autowired
+	private LoggingService logger;	
 	private Connection smppConnection;
 	
 	public SMSMessageManager() {	
@@ -45,9 +46,13 @@ public class SMSMessageManager {
 		    //dbService = (DatabaseService)appCtx.getBean("databaseService");	
 		    //smppService = (SMSService)appCtx.getBean("smppService");	
 		    //smsMessageManager = (SMSMessageManager)appCtx.getBean("smsMessageManager");	
-						      		
-			logger = new LoggingService(); 
-			smppService = new SMSService();
+				
+		    if(logger == null)
+	           logger = new LoggingService(); 
+			if(smsService == null)
+		       smsService = new SMSService();
+			if(dbService == null)
+			       dbService = new DatabaseService();
 			
 	   }    
 	   catch(RuntimeException e){
@@ -56,7 +61,7 @@ public class SMSMessageManager {
 	      throw e;
 	   }		
 	   try {
-	      smppConnection = smppService.setupSMSCServerInfo();
+	      smppConnection = smsService.setupSMSCServerInfo();
 	   }
 	   catch(UnknownHostException uhe ) {
 		    throw new SmsNetworkException("UnknownHostException occured during connecting to SMSC server, due to: " + uhe.getMessage());
@@ -64,7 +69,6 @@ public class SMSMessageManager {
        catch(Exception e ) {	
     	    e.printStackTrace();
     	    throw new SmsNetworkException("Exception occured during connecting to SMSC server, due to: " + e.getMessage());
-    		
        }	
 	}	
 	    	
@@ -72,33 +76,44 @@ public class SMSMessageManager {
 		
 		logger.info("**** Begin processMessage() for TN: "+ destinationTN + "****");
 		String messageId = null;
-			    		
+		String result = null;
+			
 		try {
-	       	smppService.bind(smppConnection);	    	   
+	       	smsService.bind(smppConnection);	    	   
 	        //just propaganda the exceptions if they occur
-	       	messageId = sendRequest(destinationTN, message);		    
+	       	messageId = sendRequest(destinationTN, message);	       	
 		}		
 		catch(ConnectException ce){
 			logger.error("ConnectException ocured while trying to bind SMSSC servcer, due to "+ ce.getMessage());
+			result = ce.getMessage();
 			throw new SmsNetworkException(this, "bind", destinationTN, "ConnectException occured while trying to bind SMSSC servcer", ce);
 		}
 		catch(NotBoundException nbe){
 			logger.error("NotBoundException occured while binding, due to "+ nbe.getMessage());
+	        result=nbe.getMessage();
 			throw new SmsNetworkException(this, "bind", destinationTN, "NotBoundException occured while binding SMPP connection", nbe);
 		}
 		catch(IOException ioe){
 			logger.error("IOException occured while binding, due to "+ ioe.getMessage());
+			result = ioe.getMessage();
 			throw new SmsIOException(this, "bind", destinationTN, "IOException occured while binding SMPP connection", ioe);
 		}	
 		catch(Exception e){
 			logger.error("Exception occured while binding, due to "+ e.getMessage());
+			result = e.getMessage();
 			throw new SmsException(this, "bind", destinationTN, "IOException occured while binding SMPP connection", e);
 		}
 		finally{
 			//once we're done sending SMS message, we want to unbind our connection.
-	    	 smppService.unbind(smppConnection);
-	    	 cleanUp();
-	 	}
+			try {
+				dbService.saveSmsMessage(new SMSMessage(destinationTN, message, result));
+			}
+			catch(Exception e){
+				logger.error("Exception occured while binding, due to "+ e.getMessage());
+			}
+			smsService.unbind(smppConnection);
+	    	cleanUp();
+	 	}		
 	    logger.info("Message was sent out successfully to: " + destinationTN + " Message ID = " + messageId);
 	    logger.info("**** Finished processMessage with message String****");
 		
@@ -109,7 +124,7 @@ public class SMSMessageManager {
     	logger.info("**** Begin processMessage with Message Object****");
     	String messageId = null;				
 	    try {
-	       	smppService.bind(smppConnection);	
+	       	smsService.bind(smppConnection);	
 	       	//Any exception occurred here will be rethrown
 		    messageId = sendRequest(smsMessage.getDestinationTN(), smsMessage.getMessageText());
 		    logger.info("Message was sent out successfully to: " + smsMessage.getDestinationTN());
@@ -132,7 +147,7 @@ public class SMSMessageManager {
 		}
 		finally{
 			//once we're done sending SMS message, we want to unbind our connection.
-	    	 smppService.unbind(smppConnection);
+	    	 smsService.unbind(smppConnection);
 	    	 cleanUp();
 	 	}
 	    logger.info("Message was sent out successfully to: " + smsMessage.getDestinationTN() + " Message ID = " + messageId);
@@ -148,7 +163,7 @@ public class SMSMessageManager {
 		    for(int j = 0; j < smsList.size(); j++ ) {
 		    	destinationTN = smsList.get(j).getDestinationTN();
 	    	    try {
-	    	    	smppService.bind(smppConnection);
+	    	    	smsService.bind(smppConnection);
 	    	    	//Any exception occurred here will be re-thrown
 				    sendRequest(destinationTN, smsList.get(j).getMessageText());
 			        logger.info("Message was sent out successfully to: " + destinationTN);
@@ -180,7 +195,7 @@ public class SMSMessageManager {
 		 }
 	     finally{
 			//once we're done traversing the list of pending SMS messages, we want to unbind our connection.
-	    	 smppService.unbind(smppConnection);
+	    	 smsService.unbind(smppConnection);
 	    	 cleanUp();
 		}
 		logger.info("Total number of the destinations being sent to the messages = " + messageCounter);
@@ -215,7 +230,7 @@ public class SMSMessageManager {
 		logger.info("SMPPRequest Message Text     = "+shortMsg.getMessageText());
 		
 		//just propaganda the exceptions if they occur
-		SMPPResponse smppResponse = smppService.sendRequest(smppConnection, shortMsg);
+		SMPPResponse smppResponse = smsService.sendRequest(smppConnection, shortMsg);
 			
 		if( smppResponse != null ) {
 			logger.info("------ SMPPResponse -------");
@@ -231,9 +246,15 @@ public class SMSMessageManager {
 			logger.warn("SMPPResponse is null!!!");
 		}		
 		return messageId;
-	}	
+	}
 	
-	/*
+	@PreDestroy
+    public void cleanUp() {
+    	logger.trace("********** CleanUp **********");    
+    	smsService.releaseConnection(smppConnection);
+	}	
+    
+    /*
 	private void validateInput(String destinationTN, String message) throws InputException{	
 	
 		if(destinationTN.length() !=10)
@@ -241,13 +262,6 @@ public class SMSMessageManager {
 		
 		if(message.length() < 1)
 			throw new InputException("SMS message is empty");
-
 	}
 	*/
-	
-	//@PreDestroy
-    public void cleanUp() {
-    	logger.trace("********** CleanUp **********");    
-    	smppService.releaseConnection(smppConnection);
-	}	
 }
