@@ -15,4 +15,8 @@ public class SmsIOException extends SmsException {
 	public SmsIOException(Object inputObject, String methodName, String destinationTN, String smsMessage, Throwable causeException) {
 		super(inputObject, methodName, destinationTN, smsMessage, causeException);
 	}
+	
+	public SmsIOException(Object inputObject, String methodName, String smsMessage, Throwable causeException) {
+		super(inputObject, methodName, smsMessage, causeException);
+	}
 }

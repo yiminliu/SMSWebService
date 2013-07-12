@@ -6,12 +6,10 @@ import javax.xml.ws.WebServiceException;
 @XmlRootElement
 public class SmsException extends WebServiceException {
 	private static final long serialVersionUID = -1984305003999836500L;
-	/**
+	/** This is the base class of SMS exceptions
 	 * Value that can be referenced in the database with the exception transaction
 	 * and parameters
 	 */
-	//private int transactionid;
-	//private int customerId;
 	private String  destinationTN;
 	private String className;
 	private String methodName;
@@ -19,7 +17,7 @@ public class SmsException extends WebServiceException {
 	private String smsErrorMessage;
 	//private String causeErrorCode;
 	private String causeErrorMessage;
-	private Throwable causeException;
+	private Throwable causeException = null;
 		
 	public SmsException() {
 		//super();
@@ -33,21 +31,32 @@ public class SmsException extends WebServiceException {
 		super(message, t);
 	}
 		
-	public SmsException(Object obj, String methodName, String destinationTN, String smsMessage) {
-		super(smsMessage);
+	public SmsException(Object obj, String methodName, String destinationTN, String smsErrorMessage) {
+		super(smsErrorMessage);
 		this.className = (obj == null? "" : obj.getClass().getName());
 		this.methodName = methodName;
 		this.destinationTN = destinationTN;
-		this.smsErrorMessage = smsMessage;
+		this.smsErrorMessage = smsErrorMessage;
 		//ErrorInfoUtil.logAndSaveMVNEException(this);
 	}
 		
-	public SmsException(Object obj, String methodName, String destinationTN, String smsMessage, Throwable causeException) {
-		super(smsMessage, causeException);
+	public SmsException(Object obj, String methodName, String smsErrorMessage, Throwable causeException) {
+		super(smsErrorMessage, causeException);
+		this.className = (obj == null? "" : obj.getClass().getName());
+		this.methodName = methodName;
+		this.smsErrorMessage = smsErrorMessage;
+		this.causeErrorMessage = causeException == null? "" : causeException.getMessage();
+		this.causeException = causeException;
+		
+		//ErrorInfoUtil.logAndSaveMVNEException(this);
+	}
+	
+	public SmsException(Object obj, String methodName, String destinationTN, String smsErrorMessage, Throwable causeException) {
+		super(smsErrorMessage, causeException);
 		this.className = (obj == null? "" : obj.getClass().getName());
 		this.methodName = methodName;
 		this.destinationTN = destinationTN;
-		this.smsErrorMessage = smsMessage;
+		this.smsErrorMessage = smsErrorMessage;
 		this.causeErrorMessage = causeException == null? "" : causeException.getMessage();
 		this.causeException = causeException;
 		
@@ -80,6 +89,10 @@ public class SmsException extends WebServiceException {
 		this.methodName = methodName;
 	}
 	
+	public String getMessage() {
+		return causeErrorMessage;
+	}
+	
 	public String getCauseErrorMessage() {
 		return causeErrorMessage;
 	}
@@ -92,17 +105,16 @@ public class SmsException extends WebServiceException {
 		this.causeException = causeException;
 	}
 		
-	public String getTscpmvneErrorMessage() {
+	public String getSmsErrorMessage() {
 		return smsErrorMessage;
 	}
 
-	public void setTscpmvneErrorMessage(String smsErrorMessage) {
+	public void setSmsErrorMessage(String smsErrorMessage) {
 		this.smsErrorMessage = smsErrorMessage;
 	}
 
 	public Throwable getCauseException(){
 		return causeException;
 	}
-		
 
 }

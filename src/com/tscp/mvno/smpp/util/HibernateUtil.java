@@ -10,7 +10,7 @@ import org.hibernate.cfg.Configuration;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.tscp.mvno.smpp.dao.SmsDao;
+import com.tscp.mvno.smpp.dao.HibernateSmsDao;
 import com.tscp.mvno.smpp.service.LoggingService;
 
 @Service
@@ -72,7 +72,7 @@ public class HibernateUtil {
     
     public static Configuration addAnnotationClasses(Configuration config) {        	
     		//config.addClass(PromAlertMessage.class); 
-    		//config.addAnnotatedClass(SmsDao.class);    		
+    		//config.addAnnotatedClass(HibernateSmsDao.class);    		
     		return config;
     }	
 		

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>SMSWebService</name>
+	<name>SMSGateway</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -33,4 +33,11 @@
 		<nature>org.eclipse.jdt.core.javanature</nature>
 		<nature>org.eclipse.wst.jsdt.core.jsNature</nature>
 	</natures>
+	<linkedResources>
+		<link>
+			<name>config</name>
+			<type>2</type>
+			<location>C:/Projects/workspace/SMSWebService/WebContent/WEB-INF/resource/config</location>
+		</link>
+	</linkedResources>
 </projectDescription>

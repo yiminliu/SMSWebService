@@ -10,31 +10,25 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
 import org.springframework.stereotype.Service;
 
-import com.tscp.mvno.smpp.AlertAction;
 import com.tscp.mvno.smpp.dao.SmsDao;
-import com.tscp.mvno.smpp.domain.SMSMessage;
+import com.tscp.mvno.smpp.domain.Sms;
 
 @Service
 @Scope("singleton")
 public class DatabaseService {
 
     @Autowired
-    private SmsDao smsDao;  
+    private SmsDao hibernateSmsDao;  
      
     public DatabaseService(){}
-       
-    public List<SMSMessage> getSMSMessageList(AlertAction messageType) throws Exception {
-		
-    	return smsDao.getAlertMessages(messageType.getActionProcedureName());
-    }	
-            
-    public int saveSmsMessage(SMSMessage sms){
-    	return smsDao.saveSmsMessage(sms);
+                  
+    public int saveSmsMessage(Sms sms){
+    	return hibernateSmsDao.saveSmsMessage(sms);
     }
     
     private void initForTest() {    	
     	ApplicationContext appCtx = new ClassPathXmlApplicationContext("application-context.xml");
-    	smsDao = (SmsDao)appCtx.getBean("smsDao");
+    	hibernateSmsDao = (SmsDao)appCtx.getBean("hibernateSmsDao");
     }    
     
     public static void main(String[] args) { 
@@ -42,7 +36,7 @@ public class DatabaseService {
     	DatabaseService ds = new DatabaseService();
     	ds.initForTest();
     	System.out.println("Testing SMPP Project ConnectionInfo class....");
-    	SMSMessage sms = new SMSMessage();
+    	Sms sms = new Sms();
     	try {
     	sms.setDestinationTN("2132566431");
     	sms.setMessageText("test");
